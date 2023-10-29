@@ -2,6 +2,8 @@
 /* Includes ---------------------------------------------------------------- */
 #include <multiple_items_data_inferencing.h>
 #include "edge-impulse-sdk/dsp/image/image.hpp"
+// #include <product_detection_inferencing.h>
+// #include "edge-impulse-sdk/dsp/image/image.hpp"
 
 #include "esp_camera.h"
 #include <WiFi.h>
@@ -219,10 +221,12 @@ void loop() {
     }
     ei_printf("    %s (%f) [ x: %u, y: %u, width: %u, height: %u ]\n", bb.label, bb.value, bb.x, bb.y, bb.width, bb.height);
     String val = bb.label;
-    addToList(myList, maxSize, val);
+    webSocket.broadcastTXT(val);
+    // addToList(myList, maxSize, val);
   }
   if (!bb_found) {
     ei_printf("    No objects found\n");
+    webSocket.broadcastTXT("empty");
   }
 #else
   for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
