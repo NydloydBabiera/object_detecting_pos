@@ -4,18 +4,23 @@
 #include "edge-impulse-sdk/dsp/image/image.hpp"
 // #include <product_detection_inferencing.h>
 // #include "edge-impulse-sdk/dsp/image/image.hpp"
+// #include <new_test_data_inferencing.h>
+// #include "edge-impulse-sdk/dsp/image/image.hpp"
 
 #include "esp_camera.h"
 #include <WiFi.h>
 #include <WebSocketsServer.h>
 
+
 /*************************
 *WEB SOCKET SETUP
 *************************/
-const char *ssid = "Nyd_me";
-const char *password = "shairalangmalakas";
+
+const char *ssid = "Nyd_Wifi_2.4";
+const char *password = "nydloydlangmalakas";
 const int maxSize = 999;  // Define the maximum size of the list
 String myList[maxSize];
+int curArrCnt = 0;
 
 WebSocketsServer webSocket = WebSocketsServer(80);
 
@@ -214,6 +219,7 @@ void loop() {
 
 #if EI_CLASSIFIER_OBJECT_DETECTION == 1
   bool bb_found = result.bounding_boxes[0].value > 0;
+  int cntBox = 0;
   for (size_t ix = 0; ix < result.bounding_boxes_count; ix++) {
     auto bb = result.bounding_boxes[ix];
     if (bb.value == 0) {
@@ -221,12 +227,23 @@ void loop() {
     }
     ei_printf("    %s (%f) [ x: %u, y: %u, width: %u, height: %u ]\n", bb.label, bb.value, bb.x, bb.y, bb.width, bb.height);
     String val = bb.label;
-    webSocket.broadcastTXT(val);
-    // addToList(myList, maxSize, val);
+    String cnt = String(ix);
+    // webSocket.broadcastTXT(val);
+    // webSocket.broadcastTXT(cnt);
+    // Serial.print("count");
+    // Serial.println(ix);
+    cntBox = ix;
+    myList[ix] = val;
   }
+  // Serial.print("count");
+  // Serial.println(cntBox);
+
   if (!bb_found) {
     ei_printf("    No objects found\n");
     webSocket.broadcastTXT("empty");
+    clearArray(cntBox);
+  }else{
+  sendArray(cntBox + 1);
   }
 #else
   for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
@@ -243,24 +260,42 @@ void loop() {
   free(snapshot_buf);
 }
 
-void addToList(String list[], int maxSize, String newValue) {
-  Serial.println("newValue:" + newValue);
-  // Check if the string exist
-  // bool exists = stringExistsInList(myList, maxSize, newValue);
-  // if (exists) {
-  //   return;
-  // }
-  // Find the first available index in the list
-  int index = 0;
-  while (index < maxSize && list[index] != "") {
-    index++;
+void addToList(int arrSize, String newValue) {
+  for (int x = 0; x < arrSize; x++) {
+    myList[x] = newValue;
   }
 
+  Serial.print("arrSize:");
+  Serial.println(arrSize);
   // Add the new value to the list
-  list[index] = newValue;
-  webSocket.broadcastTXT(newValue);  //send to websocket
+
+  sendArray(arrSize);
+  curArrCnt = arrSize;
+  // webSocket.broadcastTXT(newValue);  //send to websocket
 }
 
+void sendArray(int arrSize) {
+  String arrayData = "[";
+  for (int i = 0; i < arrSize; ++i) {
+    arrayData += String(myList[i]);
+    if (i < arrSize) {
+      arrayData += ",";
+    }
+  }
+  arrayData += "]";
+
+  webSocket.sendTXT(0, arrayData);
+}
+
+void clearArray(int arrSize) {
+  // Get the size of the array
+  // int arraySize = sizeof(myArray) / sizeof(myArray[0]);
+
+  // Set each element to a default value (0 in this case)
+  for (int i = 0; i < arrSize; ++i) {
+    myList[i] = "";
+  }
+}
 bool stringExistsInList(String list[], int maxSize, String searchValue) {
   // Check if the searchValue exists in the list
   for (int i = 0; i < maxSize; i++) {
